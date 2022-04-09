@@ -6,7 +6,7 @@ module.exports = function dateValidator(date) {
         let dateArray = date.split(',');
 
         for (const date of dateArray) {
-            if (!moment(date, 'MM/DD/YYYY',true).isValid()) {
+            if (!moment(date, 'YYYY-MM-DD', true).isValid()) {
                 throw ApiError.badRequest('Date format is not correct');
             }
         }

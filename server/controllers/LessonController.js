@@ -1,7 +1,7 @@
 const {Lesson, Teacher, Student} = require('../models')
-const {Op} = require('sequelize')
 const sequelize = require('sequelize')
 const ValidationError = require('../errors/ValidationError')
+const moment = require("moment");
 
 class LessonController {
     async create(req, res) {
@@ -10,7 +10,50 @@ class LessonController {
             return validationResult;
         }
 
-        return res.status(200).json({param: 'test'});
+        let {teacherIds, title, days, date, lessonsCount, lastDate} = req.body;
+
+        const lessons = [];
+
+        date = moment(date, 'YYYY-MM-DD', true);
+        let maxDate = moment(date, 'YYYY-MM-DD', true).add(1, 'year');
+
+        let maxLessonsCount = lessonsCount;
+        if (lastDate) {
+            lastDate = moment(lastDate, 'YYYY-MM-DD', true);
+            maxDate = lastDate;
+            maxLessonsCount = moment.duration(lastDate.diff(date)).asDays() + 1;
+        }
+        maxLessonsCount = maxLessonsCount > 300 ? 300 : maxLessonsCount;
+
+        while (!date.isAfter(maxDate) && maxLessonsCount > 0) {
+            let currentWeekday = date.weekday();
+
+            if (days.includes(currentWeekday)) {
+                const lesson = await Lesson.create(
+                    {
+                        date: date.format('YYYY-MM-DD'),
+                        title: title,
+                        status: 0,
+                    }
+                );
+
+                for (const teacherId of teacherIds) {
+                    const teacher = await Teacher.findOne({
+                        where:{'id': teacherId}
+                    })
+
+                    lesson.addTeacher(teacher);
+                }
+
+                lessons.push(lesson.id);
+
+                maxLessonsCount -= 1;
+            }
+
+            date.add(1, 'day');
+        }
+
+        return res.status(200).json(lessons);
     }
 
     async get(req, res) {
@@ -82,7 +125,7 @@ class LessonController {
             const dateArray = date.split(',');
             let dateParams = new Date(dateArray[0])
             if (dateArray.length !== 1) {
-                dateParams = {[Op.between]: [new Date(dateArray[0]), new Date(dateArray[1])]};
+                dateParams = {[sequelize.Op.between]: [new Date(dateArray[0]), new Date(dateArray[1])]};
             }
 
             lessonOptions.where.date = dateParams;
@@ -102,7 +145,7 @@ class LessonController {
             }
 
             lessonOptions.where.id = {
-                [Op.in]: [
+                [sequelize.Op.in]: [
                     sequelize.literal(`
                         SELECT lessons.id
                         FROM lessons
@@ -123,7 +166,7 @@ class LessonController {
 
         const lessons = await Lesson.findAll(lessonOptions)
 
-        return res.status(200).json({lessons});
+        return res.status(200).json(lessons);
     }
 }
 
