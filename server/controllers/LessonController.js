@@ -1,14 +1,24 @@
 const {Lesson, Teacher, Student} = require('../models')
-const {body} = require('express-validator');
 const {Op} = require('sequelize')
 const sequelize = require('sequelize')
+const ValidationError = require('../errors/ValidationError')
 
 class LessonController {
     async create(req, res) {
+        const validationResult = ValidationError.validate(req, res)
+        if (validationResult !== true) {
+            return validationResult;
+        }
 
+        return res.status(200).json({param: 'test'});
     }
 
     async get(req, res) {
+        const validationResult = ValidationError.validate(req, res)
+        if (validationResult !== true) {
+            return validationResult;
+        }
+
         let {date, status, teacherIds, studentsCount, page = 1, lessonsPerPage = 5} = req.query;
 
         let lessonOptions = {
