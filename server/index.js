@@ -1,17 +1,6 @@
-require('dotenv').config();
-const express = require('express');
-const sequelize = require('./db');
-const models = require('./models');
-const router = require('./routes/index');
-const cors = require('cors');
-
+const app = require('./app');
+const sequelize = require("./db");
 const PORT = process.env.PORT || 5000;
-
-const app = express();
-
-app.use(cors());
-app.use(express.json());
-app.use(router);
 
 const start = async () => {
     try {
@@ -22,6 +11,5 @@ const start = async () => {
         console.log(e);
     }
 }
-
 
 start()
