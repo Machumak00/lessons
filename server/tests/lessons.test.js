@@ -238,6 +238,7 @@ describe('Lessons tests', function () {
 
             request(app)
                 .post('/lessons')
+                .timeout(3000)
                 .send({
                     teacherIds: teacherIds,
                     title: title,

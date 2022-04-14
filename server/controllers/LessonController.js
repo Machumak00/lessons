@@ -1,4 +1,4 @@
-const {Lesson, Teacher, Student} = require('../models')
+const {Lesson, Teacher, Student, LessonStudent} = require('../models')
 const sequelize = require('sequelize')
 const ValidationError = require('../errors/ValidationError')
 const moment = require("moment");
@@ -65,43 +65,15 @@ class LessonController {
         let {date, status, teacherIds, studentsCount, page = 1, lessonsPerPage = 5} = req.query;
 
         let lessonOptions = {
-            attributes: [
-                'id', 'date', 'title', 'status',
-                [
-                    sequelize.literal(`(
-                        SELECT COUNT(ls.visit)
-                        FROM lesson_students AS ls
-                        WHERE
-                            ls.lesson_id = lessons.id
-                            AND
-                            ls.visit = true
-                    )`),
-                    'visitCount'
-                ],
-            ],
+            attributes: ['id', 'date', 'title', 'status'],
             where: {},
-            group: ['id'],
             include: [
                 {
                     model: Student,
-                    required: true,
+                    required: false,
                     through: {
-                        attributes: []
-                    },
-                    attributes: [
-                        'id', 'name',
-                        [
-                            sequelize.literal(`(
-                                SELECT visit
-                                FROM lesson_students as ls
-                                WHERE
-                                    ls.student_id = students.id
-                                    AND
-                                    ls.lesson_id = lessons.id
-                            )`),
-                            'visit'
-                        ]
-                    ],
+                        attributes: ['visit']
+                    }
                 },
             ],
             offset: page * lessonsPerPage - lessonsPerPage,
@@ -110,7 +82,7 @@ class LessonController {
 
         let teacherParams = {
             model: Teacher,
-            required: true,
+            required: false,
             where: {},
             through: {
                 attributes: []
@@ -164,9 +136,25 @@ class LessonController {
             };
         }
 
-        const lessons = await Lesson.findAll(lessonOptions)
+        const lessons = await Lesson.findAll(lessonOptions);
 
-        return res.status(200).json(lessons);
+        let jsonLessons = JSON.parse(JSON.stringify(lessons))
+        for (const lesson of jsonLessons) {
+            let visitCount = 0;
+
+            for (const student of lesson.students) {
+                student.visit = student.lesson_students.visit;
+                delete student.lesson_students;
+
+                if (student.visit === true) {
+                    visitCount += 1;
+                }
+            }
+
+            lesson.visitCount = visitCount;
+        }
+
+        return res.status(200).json(jsonLessons);
     }
 }
 
